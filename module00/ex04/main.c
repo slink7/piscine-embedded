@@ -1,5 +1,6 @@
 
 #include <avr/io.h>
+#include <util/delay.h>
 #include <stdint.h>
 
 int clamp(int val, int min, int max) {
@@ -9,6 +10,8 @@ int clamp(int val, int min, int max) {
 // ============================
 // BUTTON WRAPPER
 // ============================
+
+const double DEBOUCER_DELAY = 10.0;
 
 typedef struct {
 	uint8_t prev;
@@ -27,6 +30,9 @@ button new_button(int ddrd_b, int pin_b) {
 
 int is_rising(button *b) {
 	uint8_t value = !(PIND & (1 << b->pin_b));
+	_delay_ms(DEBOUCER_DELAY);
+	if (value != !(PIND & (1 << b->pin_b)))
+		return (0);
 	int out = value && !b->prev;
 	b->prev = value;
 	return (out);
