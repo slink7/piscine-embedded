@@ -1,7 +1,6 @@
 
 #include <avr/io.h>
 #include <stdint.h>
-#include <util/delay.h>
 
 int clamp(int val, int min, int max) {
 	return (val < min ? min : val > max ? max : val);
@@ -51,7 +50,7 @@ led new_led(int ddrb_b, int pin_b) {
 }
 
 void set_led(led *l, int v) {
-	PORTB = (!!v << l->pin_b);
+	PORTB = (PORTB & ~(1 << l->pin_b)) | (!!v << l->pin_b);
 }
 
 // ==========================
