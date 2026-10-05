@@ -1,53 +1,32 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
 
 #ifndef F_CPU
 	#warning "Missing -DF_CPU compilation flags"
 	#define F_CPU 16000000UL
 #endif
 
-// ==========================
-// LED WRAPPER
-// ==========================
-
-typedef struct {
-	int ddrb_b;
-	int pin_b;
-} led;
-
-led new_led(int ddrb_b, int pin_b) {
-	DDRB |= (1 << ddrb_b);
-	return ((led) {
-		ddrb_b,
-		pin_b
-	});
-}
-
-void toggle_led(led *l) {
-	PORTB ^= (1 << l->pin_b);
-}
-
-// ==========================
-// main
-// ==========================
-
-led d1;
-
 int main() {
-	d1 = new_led(DDB1, PB1);
 
-	//Mettre le timer en mode CTC
+	//Time/Counter1 Control Register (A & B)
+	//Mettre le timer en mode CTC (WGM12)
+	//CTC: Reintialise auto le comteur (TCNT1) quand il depasse le seuil (OCR1A)
 	TCCR1A = 0;
 	TCCR1B = (1 << WGM12);
 
-	//Mettre le prescaler
+	//Mettre le prescaler a 1024 (CS10)
 	TCCR1B |= (1 << CS12) | (1 << CS10);
 
+	//OCR1A = periode du comteur ou declancher un interrupt
 	OCR1A = F_CPU / 2048;
 
+	//Timer/Counter1 Interrupt Mask Register
+	//OCIE1A = Output Compare Interrupt Enable 1A
+	//Active l'utilisation de OCR1A
 	TIMSK1 |= (1 << OCIE1A);
 
+	//Active les interruptions
+	//"Set Global Interrupt Enable"
 	sei();
 
 	while (1) {
@@ -55,5 +34,6 @@ int main() {
 }
 
 ISR(TIMER1_COMPA_vect) {
-	toggle_led(&d1);
+	//Toggle du D2 par lien atomique
+	PINB = (1 << PINB1);
 }
