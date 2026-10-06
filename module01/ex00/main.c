@@ -35,7 +35,6 @@ int main() {
 	while (1) {
 		if (ticks % 10000 == 0)
 			toggle_led(&d1);
-		//_delay_ms(500.0);
 		ticks++;
 	}
 }
