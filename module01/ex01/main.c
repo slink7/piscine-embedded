@@ -7,8 +7,10 @@
 #endif
 
 //Macros directement reprises du interrupt.h
+//Set le flag global SEI
 # define sei()  __asm__ __volatile__ ("sei" ::: "memory")
 
+//Set une fonction dans la zone .text reseve.
 # define ISR(vector, ...)            \
     void vector (void) __attribute__ ((__signal__)) __VA_ARGS__; \
     void vector (void)
