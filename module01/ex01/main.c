@@ -1,10 +1,17 @@
 #include <avr/io.h>
-#include <avr/interrupt.h>
+// #include <avr/interrupt.h>
 
 #ifndef F_CPU
 	#warning "Missing -DF_CPU compilation flags"
 	#define F_CPU 16000000UL
 #endif
+
+//Macros directement reprises du interrupt.h
+# define sei()  __asm__ __volatile__ ("sei" ::: "memory")
+
+# define ISR(vector, ...)            \
+    void vector (void) __attribute__ ((__signal__)) __VA_ARGS__; \
+    void vector (void)
 
 int main() {
 
@@ -34,6 +41,5 @@ int main() {
 }
 
 ISR(TIMER1_COMPA_vect) {
-	//Toggle du D2 par lien atomique
 	PINB = (1 << PINB1);
 }
