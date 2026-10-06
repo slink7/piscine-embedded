@@ -17,9 +17,16 @@ clean:
 
 upload: all clean
 
-uart: upload
-	# screen $(DEVICE) $(UART_BAUDRATE)
+hd: upload
 	stty -F $(DEVICE) $(UART_BAUDRATE) raw cs8 -cstopb -parenb
 	hexdump -Cv /dev/ttyUSB0
+
+cat: upload
+	stty -F $(DEVICE) $(UART_BAUDRATE) raw cs8 -cstopb -parenb
+	cat /dev/ttyUSB0
+
+screen: upload
+	screen $(DEVICE) $(UART_BAUDRATE)
+
 
 .PHONY: clean upload hex flash all
