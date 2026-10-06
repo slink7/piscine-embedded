@@ -6,16 +6,9 @@
 	#define F_CPU 16000000UL
 #endif
 
-//Macros directement reprises du interrupt.h
-//Set le flag global SEI
-# define sei()  __asm__ __volatile__ ("sei" ::: "memory")
-
-//Set une fonction dans la zone .text reseve.
-# define ISR(vector, ...)            \
-    void vector (void) __attribute__ ((__signal__)) __VA_ARGS__; \
-    void vector (void)
-
 int main() {
+
+	DDRB |= (1 << PB1);
 
 	//Time/Counter1 Control Register (A & B)
 	//Mettre le timer en mode CTC (WGM12)
@@ -29,19 +22,9 @@ int main() {
 	//OCR1A = periode du comteur ou declancher un interrupt
 	OCR1A = F_CPU / 2048;
 
-	//Timer/Counter1 Interrupt Mask Register
-	//OCIE1A = Output Compare Interrupt Enable 1A
-	//Active l'utilisation de OCR1A
-	TIMSK1 |= (1 << OCIE1A);
-
-	//Active les interruptions
-	//"Set Global Interrupt Enable"
-	sei();
+	//Mettre en mode Toggle on Compare Match (pour PB1)
+	TCCR1A |= (1 << COM1A0);
 
 	while (1) {
 	}
-}
-
-ISR(TIMER1_COMPA_vect) {
-	PINB = (1 << PINB1);
 }
