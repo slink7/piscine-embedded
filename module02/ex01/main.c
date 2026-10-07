@@ -63,5 +63,5 @@ int main() {
 //What function to call when the interruption occurs:
 //TCNT1 == OCR1A
 ISR(TIMER1_COMPA_vect) {
-	uart_printstr("Hello World!\n");
+	uart_printstr("Hello World!\n\r");
 }
