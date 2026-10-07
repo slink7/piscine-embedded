@@ -70,6 +70,7 @@ void get_input(char *buff, uint8_t bsize, uint8_t obf) {
 		uart_tx(obf ? '*' : in);
 		buff[at++] = in;
 	} while (1);
+	buff[at] = 0;
 }
 
 int ft_strcmp(char *a, char *b) {
@@ -88,7 +89,6 @@ int main() {
 	char password[BUFFER_SIZE + 1] = {0};
 
 	uart_init(BAUD_PRESCALLER);
-	PINB = (1 << PINB1);
 
 	while ("while") {
 		uart_printstr("Enter your login:\n\r");
@@ -98,20 +98,19 @@ int main() {
 		get_input(password, BUFFER_SIZE, 1);
 		uart_printstr("\r\n");
 		if (ft_strcmp(USER, username) == 0 && ft_strcmp(PASS, password) == 0) {
-			uart_printstr("Yay!\n\r");
-			for (int k = 0; k < 16; k++) {
-				PINB = (1 << PINB1);
+			uart_printstr("Hello ");
+			uart_printstr(username);
+			uart_printstr("\n\rLet's disco dance !\n\r");
+			for (int k = 0; k < 120; k++) {
+				PINB = (!!(k % 2) << PINB0);
+				PINB = (!!(k % 3) << PINB1);
+				PINB = (!!(k % 4) << PINB2);
+				PINB = (!!(k % 5) << PINB4);
 				_delay_ms(200);
 			}
 			break ;
 		} else {
-			uart_printstr("Incorrect!\n\r");
+			uart_printstr("Bad combinaison username/password\n\n\r");
 		}
 	}
-}
-
-ISR(USART_RX_vect) {
-	// unsigned char c = uart_rx();
-	// c += ((c >= 'A' && c <= 'Z') - (c >= 'a' && c <= 'z')) * ('a' - 'A');
-	// uart_tx(c);
 }
