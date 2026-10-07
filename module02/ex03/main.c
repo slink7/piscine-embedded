@@ -19,6 +19,8 @@ void uart_init(unsigned int ubrr) {
 
 	//Enable reveiver and transmitter
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
+	//Enable on_byte_received interrupt
+	UCSR0B |= (1 << RXCIE0);
 
 	//Sets the frame format: 8N1 (Disabled parity & 1 stop bit are defaults)
 	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
@@ -32,8 +34,8 @@ void uart_tx(unsigned char data) {
 
 unsigned int uart_rx(void) {
 	//Wait for 1 byte to be readable (can be removed because of interrupt)
-	// while (!(UCSR0A & (1 << RXC0)))
-	// 	;
+	while (!(UCSR0A & (1 << RXC0)))
+		;
 	return UDR0;
 }
 
@@ -47,6 +49,7 @@ int main() {
 //on_byte_received interrupt
 ISR(USART_RX_vect) {
 	unsigned char c = uart_rx();
+	PORTB = (1 << PORTB2);
 	c += ((c >= 'A' && c <= 'Z') - (c >= 'a' && c <= 'z')) * ('a' - 'A');
 	uart_tx(c);
 }
