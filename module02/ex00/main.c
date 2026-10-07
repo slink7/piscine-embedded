@@ -10,7 +10,10 @@
 # define UART_BAUDRATE 115200UL
 #endif
 
-#define BAUD_PRESCALLER (F_CPU / (UART_BAUDRATE * 16UL))
+// Raw formula given by the datasheet
+// #define BAUD_PRESCALLER F_CPU / (16 * UART_BAUDRATE) - 1
+// Add half the divisor to round instead of floor/truncate
+#define BAUD_PRESCALLER (F_CPU + UART_BAUDRATE * 8UL) / (16UL * UART_BAUDRATE) - 1
 
 //UCSR0C flags
 //UMSEL01 UMSEL00 UPM01 UPM00 USBS0 UCSZ01/UDORD0 UCSZ00/UCPHA0 UCPOL0

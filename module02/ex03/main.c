@@ -10,9 +10,7 @@
 # define UART_BAUDRATE 115200UL
 #endif
 
-#define BAUD_PRESCALLER (F_CPU / (UART_BAUDRATE * 16UL))
-
-//UMSEL01 UMSEL00 UPM01 UPM00 USBS0 UCSZ01/UDORD0 UCSZ00/UCPHA0 UCPOL0
+#define BAUD_PRESCALLER (F_CPU + UART_BAUDRATE * 8UL) / (16UL * UART_BAUDRATE) - 1
 
 void uart_init(unsigned int ubrr) {
 	//Sets the baud rate
@@ -21,10 +19,9 @@ void uart_init(unsigned int ubrr) {
 
 	//Enable reveiver and transmitter
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
-	UCSR0B |= (1 << RXCIE0);
 
-	//Sets the frame format
-	UCSR0C = (1 << USBS0) | (3 << UCSZ00);
+	//Sets the frame format: 8N1 (Disabled parity & 1 stop bit are defaults)
+	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 }
 
 void uart_tx(unsigned char data) {
@@ -47,6 +44,7 @@ int main() {
 	}
 }
 
+//on_byte_received interrupt
 ISR(USART_RX_vect) {
 	unsigned char c = uart_rx();
 	c += ((c >= 'A' && c <= 'Z') - (c >= 'a' && c <= 'z')) * ('a' - 'A');

@@ -1,6 +1,5 @@
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
 
 #ifndef F_CPU
 #define F_CPU 16000000UL
@@ -10,9 +9,7 @@
 # define UART_BAUDRATE 115200UL
 #endif
 
-#define BAUD_PRESCALLER (F_CPU / (UART_BAUDRATE * 16UL))
-
-//UMSEL01 UMSEL00 UPM01 UPM00 USBS0 UCSZ01/UDORD0 UCSZ00/UCPHA0 UCPOL0
+#define BAUD_PRESCALLER (F_CPU + UART_BAUDRATE * 8UL) / (16UL * UART_BAUDRATE) - 1
 
 void uart_init(unsigned int ubrr) {
 	//Sets the baud rate
@@ -22,8 +19,8 @@ void uart_init(unsigned int ubrr) {
 	//Enable reveiver and transmitter
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
 
-	//Sets the frame format
-	UCSR0C = (1 << USBS0) | (3 << UCSZ00);
+	//Sets the frame format: 8N1 (Disabled parity & 1 stop bit are defaults)
+	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 }
 
 void uart_tx(unsigned char data) {
@@ -33,8 +30,10 @@ void uart_tx(unsigned char data) {
 }
 
 unsigned int uart_rx(void) {
+	//Waits for a byte to be readable
 	while (!(UCSR0A & (1 << RXC0)))
 		;
+	//Actually reads the byte
 	return UDR0;
 }
 

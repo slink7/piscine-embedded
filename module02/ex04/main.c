@@ -12,9 +12,12 @@
 # define UART_BAUDRATE 115200UL
 #endif
 
-#define BAUD_PRESCALLER (F_CPU / (UART_BAUDRATE * 16UL))
+#define BAUD_PRESCALLER (F_CPU + UART_BAUDRATE * 8UL) / (16UL * UART_BAUDRATE) - 1
 
-//UMSEL01 UMSEL00 UPM01 UPM00 USBS0 UCSZ01/UDORD0 UCSZ00/UCPHA0 UCPOL0
+#define BUFFER_SIZE 16
+
+#define USER "user"
+#define PASS "pass"
 
 void uart_init(unsigned int ubrr) {
 	//Sets the baud rate
@@ -23,10 +26,9 @@ void uart_init(unsigned int ubrr) {
 
 	//Enable reveiver and transmitter
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
-	// UCSR0B |= (1 << RXCIE0);
 
-	//Sets the frame format
-	UCSR0C = (1 << USBS0) | (3 << UCSZ00);
+	//Sets the frame format: 8N1 (Disabled parity & 1 stop bit are defaults)
+	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 }
 
 void uart_tx(unsigned char data) {
@@ -36,7 +38,6 @@ void uart_tx(unsigned char data) {
 }
 
 unsigned int uart_rx(void) {
-	//Wait for 1 byte to be readable (could be removed because of interrupt)
 	while (!(UCSR0A & (1 << RXC0)))
 		;
 	return UDR0;
@@ -48,8 +49,6 @@ void uart_printstr(char *s) {
 		s++;
 	}
 }
-
-#define BUFFER_SIZE 16
 
 void get_input(char *buff, uint8_t bsize, uint8_t obf) {
 	unsigned char in;
@@ -81,9 +80,6 @@ int ft_strcmp(char *a, char *b) {
 	return (*b - *a);
 }
 
-#define USER "user"
-#define PASS "pass"
-
 int main() {
 	char username[BUFFER_SIZE + 1] = {0};
 	char password[BUFFER_SIZE + 1] = {0};
@@ -100,7 +96,7 @@ int main() {
 		if (ft_strcmp(USER, username) == 0 && ft_strcmp(PASS, password) == 0) {
 			uart_printstr("Hello ");
 			uart_printstr(username);
-			uart_printstr("\n\rLet's disco dance !\n\r");
+			uart_printstr("\n\r\e[33mLet's disco dance !\e[0m\n\r");
 			for (int k = 0; k < 120; k++) {
 				PINB = (!!(k % 2) << PINB0);
 				PINB = (!!(k % 3) << PINB1);
