@@ -17,6 +17,14 @@
 // PCINT18 (Pin Change Interrupt 18)
 //
 
+//
+// ISR define in interrupt.h
+//
+// #define ISR(vector, ...)                                                      \
+//  void vector(void) __attribute__((__signal__, __INTR_ATTRS)) __VA_ARGS__;     \
+//  void vector(void)
+//
+
 int main() {
 	
 	DDRB |= (1 << PB0);
@@ -37,7 +45,8 @@ int main() {
 }
 
 //Set INT0 interrupt's address
-ISR(INT0_vect) {
+void INT0_vect(void) __attribute__((__signal__, __INTR_ATTRS));
+void INT0_vect(void) {
 	//Toggle led
 	PORTB ^= (1 << PORTB0);
 }
