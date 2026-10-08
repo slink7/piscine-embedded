@@ -50,11 +50,22 @@ void uart_printstr(char *s) {
 	}
 }
 
+void USART_flush() {
+	unsigned char dummy;
+	while (UCSR0A & (1 << RXC0))
+		dummy = UDR0;
+}
+
 void get_input(char *buff, uint8_t bsize, uint8_t obf) {
 	unsigned char in;
 	uint8_t at = 0;
 	do {
 		in = uart_rx();
+		if (in == '\e') {
+			_delay_ms(50.0);
+			USART_flush();	
+			continue ;
+		}
 		if (in == '\r') {
 			PINB = (1 << PINB1);
 			break ;
