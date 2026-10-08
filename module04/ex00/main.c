@@ -31,7 +31,7 @@ int main() {
 
 	// Must set I-bit in SREG (Status register)
 	// same as calling sei();
-	SREG |= 1 << 7;
+	SREG |= (1 << 7);
 
 	// External Interrupt Mask Register
 	//
