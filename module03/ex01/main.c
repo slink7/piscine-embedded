@@ -1,16 +1,7 @@
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdint.h>
-
-#ifndef F_CPU
-#define F_CPU 16000000UL
-#endif
-
-#ifndef UART_BAUDRATE
-# define UART_BAUDRATE 115200UL
-#endif
 
 // PD3  PD5 PD6
 // blue red green

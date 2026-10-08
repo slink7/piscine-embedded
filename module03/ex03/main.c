@@ -4,17 +4,7 @@
 #include <util/delay.h>
 #include <stdint.h>
 
-#ifndef F_CPU
-#define F_CPU 16000000UL
-#endif
-
-#ifndef UART_BAUDRATE
-# define UART_BAUDRATE 115200UL
-#endif
-
-#define BAUD_PRESCALLER (F_CPU / (UART_BAUDRATE * 16UL))
-
-//UMSEL01 UMSEL00 UPM01 UPM00 USBS0 UCSZ01/UDORD0 UCSZ00/UCPHA0 UCPOL0
+#define BAUD_PRESCALLER ((F_CPU + (UART_BAUDRATE * 8UL)) / (UART_BAUDRATE * 16UL)) - 1
 
 void uart_init(unsigned int ubrr) {
 	//Sets the baud rate
@@ -25,7 +15,7 @@ void uart_init(unsigned int ubrr) {
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
 
 	//Sets the frame format
-	UCSR0C = (1 << USBS0) | (3 << UCSZ00);
+	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 }
 
 void uart_tx(unsigned char data) {
@@ -35,7 +25,6 @@ void uart_tx(unsigned char data) {
 }
 
 unsigned int uart_rx(void) {
-	//Wait for 1 byte to be readable (could be removed because of interrupt)
 	while (!(UCSR0A & (1 << RXC0)))
 		;
 	return UDR0;
@@ -51,9 +40,9 @@ void uart_printstr(char *s) {
 void init_rgb() {
 	DDRD |= (1 << PD3) | (1 << PD5) | (1 << PD6);
 	
-	//Timer0, mode 7. FastPWM, TOP = OCRA
+	// Set timer modes
 	TCCR0A |= (1 << WGM02) | (1 << WGM01) | (1 << WGM00);
-	TCCR2A |= (1 << WGM02) | (1 << WGM01) | (1 << WGM00);
+	TCCR2A |= (1 << WGM22) | (1 << WGM21) | (1 << WGM20);
 
 	OCR0A = 0;
 	OCR0B = 0;
@@ -61,7 +50,7 @@ void init_rgb() {
 
 	// Prescaler 1024
 	TCCR0B |= (1 << CS02) | (1 << CS00);
-	TCCR2B |= (1 << CS02) | (1 << CS00);
+	TCCR2B |= (1 << CS22) | (1 << CS20);
 
 	// PD6
 	TCCR0A |= (1 << COM0B1);
@@ -92,7 +81,6 @@ void get_input(char *buff, uint8_t bsize) {
 			continue ;
 		}
 		if (in == '\r') {
-			PINB = (1 << PINB1);
 			break ;
 		}
 		if (at > 0 && in == '\x7F') {
@@ -113,7 +101,7 @@ int8_t get_hex(char c) {
 		(c >= '0' && c <= '9')
 		? c - '0'
 		: (c >= 'A' && c <= 'F')
-		? c - 'A'
+		? c - 'A' + 10
 		: -1
 	);
 }
