@@ -1,6 +1,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <stdint.h>
 
 //
 // D1 / PB0
@@ -25,39 +26,45 @@
 //  void vector(void)
 //
 
+#define S(BIT) (1 << BIT)
+
+uint16_t counter = 0;
+
+#define MIN(a, b) (a + (a > b) * (b - a))
+#define F(x) (MIN(x, 30 - x))
+
 int main() {
+
+	DDRB |= S(DDB1);
 	
-	DDRB |= (1 << DDB0);
-	DDRB |= (1 << DDB1);
+	// Mode 1, PWM Phase Correct, TOP = 0x00FF
+	TCCR1A |= S(WGM10) | S(WGM10);
 
-	//Timer1, mode 7. FastPWM, TOP = OCRA
-	TCCR1A |= (1 << WGM11);
-	TCCR1B |= (1 << WGM13) | (1 << WGM12);
+	// No Prescaler
+	TCCR1B |= S(CS10);
 
-	//Prescaler 1024
-	TCCR1B |= (1 << CS10) | (1 << CS10);
+	// PB1
+	TCCR1A |= S(COM1A1) | S(COM1A1);
 
-	//PB1
-	TCCR1A |= (1 << COM1A1);
-
-	ICR1 = 30;
-
-	OCR1A = 0;
+	// TOP = 0x00FF;
+	// Initial Duty Cycle = 1%
+	OCR1A = 1 * 0x00FF / 100;
 
 
-	// ===============================
-	//
-	// ===============================
 
 
-	// Timer0 mode Fast PWM
-	TCCR0A |= (1 << WGM02) | (1 << WGM00) | (1 << WGM00);
 
-	TCCR0B |= (1 << CS02) | (1 << CS00);
+	//Mode 1, PWM Phase Correct, TOP = 0xFF
+	TCCR0A |= S(WGM00) | S(WGM00);
 
-	// 16e6 / (1024 * 255) = 61Hz
-	// 61 Interrupts per seconds
-	OCR0A = 0xFF;
+	// Prescaler 1024
+	TCCR0B |= S(CS02) | S(CS00);
+	// Effective Freq: 16e6 / 1024 = 15625
+	
+	//TOP = 0xFF
+	//Interrupts at 15625 / 255 = 61Hz
+	// Half to rise, half to fall: 30
+
 
 	//Set interrupt
 	TIMSK0 |= (1 << OCIE0A);
@@ -66,15 +73,14 @@ int main() {
 	// same as calling sei();
 	SREG |= (1 << 7);
 
-	while (1) {}
-}
 
-int8_t dir = 2;
+	while (1) {
+		OCR1A = (200 * F(counter % 30) / 30) * 0x00FF / 100;
+	}
+}
 
 //Set OCIE0A interrupt's address
 void TIMER0_COMPA_vect(void) __attribute__((__signal__, __INTR_ATTRS));
 void TIMER0_COMPA_vect(void) {
-	OCR1A += dir;
-	if (OCR1A >= ICR1 || OCR1A <= 0)
-		dir *= -1;
+	counter++;
 }
