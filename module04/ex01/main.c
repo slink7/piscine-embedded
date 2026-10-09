@@ -1,6 +1,5 @@
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include <stdint.h>
 
 //
@@ -18,20 +17,12 @@
 // PCINT18 (Pin Change Interrupt 18)
 //
 
-//
-// ISR define in interrupt.h
-//
-// #define ISR(vector, ...)                                                      \
-//  void vector(void) __attribute__((__signal__, __INTR_ATTRS)) __VA_ARGS__;     \
-//  void vector(void)
-//
-
 #define S(BIT) (1 << BIT)
 
 uint16_t counter = 0;
 
 #define MIN(a, b) (a + (a > b) * (b - a))
-#define F(x) (MIN(x, 30 - x))
+#define F(x) (2 * MIN(x, 30 - x))
 
 int main() {
 
@@ -49,7 +40,6 @@ int main() {
 	// TOP = 0x00FF;
 	// Initial Duty Cycle = 1%
 	OCR1A = 1 * 0x00FF / 100;
-
 
 
 
@@ -75,12 +65,12 @@ int main() {
 
 
 	while (1) {
-		OCR1A = (200 * F(counter % 30) / 30) * 0x00FF / 100;
+		OCR1A = (100 * F(counter % 30) / 30) * 0x00FF / 100;
 	}
 }
 
 //Set OCIE0A interrupt's address
-void TIMER0_COMPA_vect(void) __attribute__((__signal__, __INTR_ATTRS));
+void TIMER0_COMPA_vect(void) __attribute__((__signal__, __used__));
 void TIMER0_COMPA_vect(void) {
 	counter++;
 }

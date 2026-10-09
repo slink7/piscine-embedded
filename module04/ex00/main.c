@@ -1,6 +1,5 @@
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
 
 //
 // D1 / PB0
@@ -45,7 +44,7 @@ int main() {
 }
 
 //Set INT0 interrupt's address
-void INT0_vect(void) __attribute__((__signal__, __INTR_ATTRS));
+void INT0_vect(void) __attribute__((__signal__, __used__));
 void INT0_vect(void) {
 	//Toggle led
 	PORTB ^= (1 << PORTB0);
