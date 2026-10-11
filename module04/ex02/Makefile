@@ -10,7 +10,9 @@ hex:
 	avr-objcopy -O ihex main.bin main.hex
 
 flash:
-	avrdude -c arduino -P $(DEVICE) -b $(UART_BAUDRATE) -U flash:w:main.hex -p m328p
+	for dev in $(shell ls /dev/ttyUSB*); do\
+		avrdude -c arduino -P $$dev -b $(UART_BAUDRATE) -U flash:w:main.hex -p m328p;\
+	done
 
 clean:
 	rm main.bin main.hex
