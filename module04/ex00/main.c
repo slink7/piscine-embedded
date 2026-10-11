@@ -26,19 +26,6 @@
 //  void vector(void)
 //
 
-#define PRESSED 0
-#define RISING 1
-
-uint16_t date = 0;
-
-uint16_t datecmp(uint16_t first, uint16_t second) {
-	if (second > first) {
-		return (second - first);
-	} else {
-		return (0xFFFF - first + second);
-	}
-}
-
 int main() {
 	
 	DDRB |= (1 << DDB0);
@@ -63,30 +50,28 @@ int main() {
 	TCCR1A = 0;
 	TCCR1C = 0;
 	//15625 Hz
+	
 
 	while (1) {
-		if (date == 0)
-			continue;
-		PORTB ^= (1 << PORTB1);
-		if (datecmp(date, TCNT1) > 15625) {
-			PORTB ^= (1 << PORTB0);
-			date = 0;
-		}
-		_delay_ms(200);
 	}
 }
 
+void TIMER1_COMPA_vect() __attribute__((__signal__, __used__, __externally_visible__));
+void TIMER1_COMPA_vect() {
+	EIMSK |= (1 << INT0);
+	TIMSK1 &= ~(1 << OCIE1A); 
+}
 
 //Set INT0 interrupt's address
 void INT0_vect(void) __attribute__((__signal__, __used__, __externally_visible__));
 void INT0_vect(void) {
-	PORTB ^= (1 << PORTB2);
-	if (date != 0)
-		return ;
-	PORTB ^= (1 << PORTB4);
-	date = TCNT1;
-	// _delay_ms(1000);
-	// //Toggle led
-	// PORTB ^= (1 << PORTB0);
+	//Toggle the led
+	PORTB ^= (1 << PORTB0);
+	//Disable INT0 interrupt
+	EIMSK &= ~(1 << INT0);
+	//Enable Timer1 Interrupt in 0.1s
+	TIMSK1 |= (1 << OCIE1A);
+	OCR1A = TCNT1 + 1563;
+	//Clear INT0 buffer
 	EIFR |= (1 << INTF0);
 }
