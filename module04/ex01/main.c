@@ -21,8 +21,10 @@
 
 uint16_t counter = 0;
 
+#define TLEN (F_CPU / 1024 / 255 / 2)
+
 #define MIN(a, b) (a + (a > b) * (b - a))
-#define F(x) (2 * MIN(x, 30 - x))
+#define F(x) (2 * MIN(x, TLEN - x))
 
 int main() {
 
@@ -56,7 +58,7 @@ int main() {
 	// Half to rise, half to fall: 30
 
 
-	//Set interrupt
+	//Set interrupt for timer0
 	TIMSK0 |= (1 << OCIE0A);
 
 	// Must set I-bit in SREG (Status register)
@@ -65,7 +67,7 @@ int main() {
 
 
 	while (1) {
-		OCR1A = (100 * F(counter % 30) / 30) * 0x00FF / 100;
+		OCR1A = (100 * F(counter % TLEN) / TLEN) * 0x00FF / 100;
 	}
 }
 

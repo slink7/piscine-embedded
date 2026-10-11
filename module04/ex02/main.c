@@ -44,6 +44,7 @@ int main() {
 
 MY_ISR(INT0_vect) {
 	_delay_ms(50.0);
+	//Certifie par paolo
 	if ((PIND & (1 << PIND2)))
 		return ;
 	PORTB++;
