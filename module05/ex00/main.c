@@ -40,9 +40,9 @@ void set_rgb(uint8_t r, uint8_t g, uint8_t b) {
 	// PD3
 	OCR2B = b;
 	// PD5
-	OCR0B = g;
+	OCR0B = r;
 	// PD6
-	OCR0A = r;
+	OCR0A = g;
 }
 
 void wheel(uint8_t pos) {

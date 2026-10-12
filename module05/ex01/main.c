@@ -124,9 +124,9 @@ int main() {
 
 	while (1) {
 
-		uint16_t rv1 = 0;
-		uint16_t ldr = 0;
-		uint16_t ntc = 0;
+		uint8_t rv1 = 0;
+		uint8_t ldr = 0;
+		uint8_t ntc = 0;
 
 		ADC_set_in(RV1);
 		ADC_read(&rv1);
