@@ -47,6 +47,22 @@ void uart_print_bar(uint8_t byte, uint8_t max) {
 	uart_tx('|');
 }
 
+void uart_print_nbr_req(uint16_t n, char *dst) {
+	if (n == 0) {
+		*dst = '0';
+		return ;
+	}
+	if (n / 10 > 0)
+		uart_print_nbr_req(n / 10, dst - 1);
+	*dst = (n > 0) ? '0' + n % 10 : ' ';
+}
+
+void uart_print_nbr(uint16_t n) {
+	char buff[5] = {' ', ' ', ' ', ' '};
+	uart_print_nbr_req(n, buff + 3);
+	uart_printstr(buff);
+}
+
 char get_nibble(uint8_t n) {
 	n &= 0xF;
 	return (
@@ -85,7 +101,7 @@ void ADC_init() {
 	// Set AVCC voltage reference
 		| (1 << REFS0)
 	// Left adjust the result
-		| (1 << ADLAR)
+		// | (1 << ADLAR)
 	;
 
 	// ADC Control and Status Register A 
@@ -97,7 +113,7 @@ void ADC_init() {
 	;
 }
 
-void ADC_read(uint8_t *out) {
+void ADC_read(uint16_t *out) {
 	
 	// Start conversion
 	ADCSRA |= (1 << ADSC);
@@ -105,7 +121,7 @@ void ADC_read(uint8_t *out) {
 	// Wait for the conversion to end
 	while (ADCSRA & (1 << ADSC));
 
-	*out = ADCH;
+	*out = ADC;
 }
 
 int main() {
@@ -114,19 +130,11 @@ int main() {
 	
 	ADC_init();
 
-	char buff[13] = {0};
-	buff[2] = ',';
-	buff[3] = ' ';
-	buff[6] = ',';
-	buff[7] = ' ';
-	buff[10] = '\r';
-	buff[11] = '\n';
-
 	while (1) {
 
-		uint8_t rv1 = 0;
-		uint8_t ldr = 0;
-		uint8_t ntc = 0;
+		uint16_t rv1 = 0;
+		uint16_t ldr = 0;
+		uint16_t ntc = 0;
 
 		ADC_set_in(RV1);
 		ADC_read(&rv1);
@@ -137,10 +145,12 @@ int main() {
 		ADC_set_in(NTC);
 		ADC_read(&ntc);
 
-		write_hex_byte(buff + 0, rv1);
-		write_hex_byte(buff + 4, ldr);
-		write_hex_byte(buff + 8, ntc);
-		uart_printstr(buff);
+		uart_print_nbr(rv1);
+		uart_printstr(", ");
+		uart_print_nbr(ldr);
+		uart_printstr(", ");
+		uart_print_nbr(ntc);
+		uart_printstr("\r\n");
 
 		_delay_ms(20);
 	}
