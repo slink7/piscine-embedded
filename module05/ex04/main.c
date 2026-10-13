@@ -16,9 +16,9 @@
 void init_rgb() {
 	DDRD |= (1 << DDD3) | (1 << DDD5) | (1 << DDD6);
 
-	//Timer, mode 7. FastPWM, TOP = OCRA/B
-	TCCR0A |= (1 << WGM02) | (1 << WGM01) | (1 << WGM00);
-	TCCR2A |= (1 << WGM22) | (1 << WGM21) | (1 << WGM20);
+	//Timer0 & 2, mode 3. FastPWM, TOP = 0xFF
+	TCCR0A |= (1 << WGM01) | (1 << WGM00);
+	TCCR2A |= (1 << WGM21) | (1 << WGM20);
 
 	OCR0A = 0;
 	OCR0B = 0;
@@ -169,5 +169,4 @@ int main() {
 
 		_delay_ms(20);
 	}
-
 }
