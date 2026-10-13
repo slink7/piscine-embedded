@@ -38,15 +38,6 @@ void uart_printstr(char *s) {
 	}
 }
 
-void uart_print_bar(uint8_t byte, uint8_t max) {
-	uart_tx(' ');
-	uart_tx('|');
-	for (uint8_t k = 0; k < max; ++k) {
-		uart_tx((k <= (max * byte / 0xFF) ? '=' : ' '));
-	}
-	uart_tx('|');
-}
-
 void uart_print_nbr_req(uint16_t n, char *dst) {
 	if (n == 0) {
 		*dst = '0';
@@ -63,20 +54,6 @@ void uart_print_nbr(uint16_t n) {
 	uart_printstr(buff);
 }
 
-char get_nibble(uint8_t n) {
-	n &= 0xF;
-	return (
-		(n > 9)
-		? 'A' + n - 10
-		: '0' + n
-	);
-}
-
-void write_hex_byte(char buf[2], uint8_t v) {
-	buf[1] = get_nibble(v >> 0);
-	buf[0] = get_nibble(v >> 4);
-}
-
 #define ADCM	0b00000011
 #define RV1		0b00000000
 #define LDR		0b00000001
@@ -90,7 +67,7 @@ void ADC_init() {
 	DDRC &= ~(1 << DDC0);
 
 	// Disabling power reduction for ADC
-	// PRR &= ~(1 << PRADC);
+	PRR &= ~(1 << PRADC);
 	
 	//PC0 ADC0 (0b0000) ADC 
 	//PC1 ADC1 (0b0001) LDR light
@@ -154,5 +131,8 @@ int main() {
 
 		_delay_ms(20);
 	}
-
 }
+
+// 60sec  2759prints
+// 46 prints/s
+// ~= 21ms
