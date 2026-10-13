@@ -67,7 +67,7 @@ void ADC_init() {
 
 	// ADC Multiplexer Selection Register
 	ADMUX = ADMUX
-	// Set AVCC voltage reference
+	// Set AVCC voltage reference (internal 1.1V)
 		| (1 << REFS1) | (1 << REFS0)
 	// Left adjust the result
 		// | (1 << ADLAR)
@@ -105,10 +105,14 @@ int main() {
 
 		uint16_t tmp = 0;
 		ADC_read(&tmp);
+		//Formula found on https://www.instructables.com/Arduino-Internal-Temperature-Sensor/
 		uart_print_nbr((tmp - 324.31) / 1.22);
 		uart_printstr("°C\r\n");
 
 		_delay_ms(20);
 	}
-
 }
+
+// 70sec 3378prints
+// 48 prints/sec
+// ~= 20ms
