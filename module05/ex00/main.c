@@ -13,51 +13,6 @@
 
 #define UBRR (F_CPU + UART_BAUDRATE * 8UL) / (16UL * UART_BAUDRATE) - 1
 
-void init_rgb() {
-	DDRD |= (1 << DDD3) | (1 << DDD5) | (1 << DDD6);
-
-	//Timer, mode 7. FastPWM, TOP = OCRA/B
-	TCCR0A |= (1 << WGM02) | (1 << WGM01) | (1 << WGM00);
-	TCCR2A |= (1 << WGM22) | (1 << WGM21) | (1 << WGM20);
-
-	OCR0A = 0;
-	OCR0B = 0;
-	OCR2B = 0;
-
-	// Prescaler 1024
-	TCCR0B |= (1 << CS02) | (1 << CS00);
-	TCCR2B |= (1 << CS22) | (1 << CS20);
-
-	// PD5
-	TCCR0A |= (1 << COM0B1);
-	// PD6
-	TCCR0A |= (1 << COM0A1);
-	// PD3
-	TCCR2A |= (1 << COM2B1);
-}
-
-void set_rgb(uint8_t r, uint8_t g, uint8_t b) {
-	// PD3
-	OCR2B = b;
-	// PD5
-	OCR0B = r;
-	// PD6
-	OCR0A = g;
-}
-
-void wheel(uint8_t pos) {
-	pos = 255 - pos;
-	if (pos < 85) {
-		set_rgb(255 - pos * 3, 0, pos * 3);
-	} else if (pos < 170) {
-		pos = pos - 85;
-		set_rgb(0, pos * 3, 255 - pos * 3);
-	} else {
-		pos -= 170;
-		set_rgb(pos * 3, 255 - pos * 3, 0);
-	}
-}
-
 void uart_init(unsigned int ubrr) {
 	//Sets the baud rate
 	UBRR0H = (unsigned char) (ubrr >> 8);
@@ -81,15 +36,6 @@ void uart_printstr(char *s) {
 		uart_tx(*s);
 		s++;
 	}
-}
-
-void uart_print_bar(uint8_t byte) {
-	uart_tx(' ');
-	uart_tx('|');
-	for (uint8_t k = 0; k < 16; ++k) {
-		uart_tx((k <= (byte >> 4) ? '=' : ' '));
-	}
-	uart_tx('|');
 }
 
 char get_nibble(uint8_t n) {
@@ -132,7 +78,6 @@ void RV1_init() {
 int main() {
 
 	uart_init(UBRR);
-	init_rgb();
 	
 	RV1_init();
 
@@ -151,17 +96,14 @@ int main() {
 		// read ADC value
 		uint8_t i = ADCH;
 
-		uart_print_bar(i);
 		write_hex_byte(buff, i);
 		uart_printstr(buff);
 
-		DDRB = 23;
-
-		wheel(i);
-
-		PORTB = i >> 4;
-		PORTB = (PORTB & ~(1 << PORTB4)) | (!!(PORTB & (1 << PORTB3)) << PORTB4);
 		_delay_ms(20);
 	}
-
 }
+
+//During 1min run
+//printed 2981 times
+// = 49 print/sec
+// ~= 20ms
