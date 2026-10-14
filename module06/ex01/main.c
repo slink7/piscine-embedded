@@ -61,8 +61,8 @@ char get_nibble(uint8_t n) {
 }
 
 void print_hex_value(char v) {
-	uart_tx(get_nibble(v >> 0));
 	uart_tx(get_nibble(v >> 4));
+	uart_tx(get_nibble(v >> 0));
 }
 
 //Waits for TWINT: TWI has finished its last job
@@ -108,36 +108,42 @@ void i2c_read(void)
 	print_hex_value(TWDR);
 }
 
+// void aht_status() {
+// 	i2c_start();
+// 	i2c_write(0x38 << 1 | 1);
+// 	i2c_write(0x71);
+// 	i2c_read();
+// 	i2c_stop();
+// }
+
 void aht_trigger() {
 	i2c_start();
 	i2c_write(0x38 << 1 | 0);
-	i2c_write(0b10101100);
-	i2c_write(0b00110011);
-	i2c_write(0b00000000);
+	i2c_write(0xAC);
+	i2c_write(0x33);
+	i2c_write(0x00);
 	i2c_stop();
 }
 
 void aht_read() {
 	i2c_start();
 	i2c_write(0x38 << 1 | 1);
-	for (int k = 0; k < 7; ++k)
+	for (int k = 0; k < 7; ++k) {
 		i2c_read();
+		uart_printstr((k == 6) ? "\r\n" : " ");
+	}
 	i2c_stop();
 }
 
 int main() {
 	uart_init(UBRR);
 	i2c_init();
+	_delay_ms(100.0);
+
 	while (1) {
+		_delay_ms(10.0);
 		aht_trigger();
 		_delay_ms(80.0);
-		uint8_t arr[7] = { 0, 0, 0, 0, 0, 0, 0 };
-		aht_read(arr);
-		for (int k = 0; k < 7; ++k) {
-			uart_hex_byte(arr[k]);
-			uart_tx(' ');
-		}
-		uart_printstr("\n\r");
-		_delay_ms(1000.0);
+		aht_read();
 	}
 }
