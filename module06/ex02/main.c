@@ -102,9 +102,9 @@ void i2c_write(unsigned char data)
 	i2c_wait();
 }
 
-uint8_t i2c_read(void)
+uint8_t i2c_read(uint8_t ack)
 {
-	TWCR = (1 << TWINT) | (1 << TWEN);
+	TWCR = (1 << TWINT) | (1 << TWEN) | (ack << TWEA);
 	i2c_wait();
 	return (TWDR);
 }
@@ -113,7 +113,7 @@ void aht_status() {
 	i2c_start();
 	i2c_write(0x38 << 1 | 1);
 	i2c_write(0x71);
-	i2c_read();
+	i2c_read(0);
 	i2c_stop();
 }
 
@@ -130,12 +130,29 @@ void aht_read(uint8_t buff[7]) {
 	i2c_start();
 	i2c_write(0x38 << 1 | 1);
 	for (int k = 0; k < 7; ++k)
-		buff[k] = i2c_read();
+		buff[k] = i2c_read(k < 6);
 	i2c_stop();
+}
+
+uint8_t crc8(const uint8_t *data, uint8_t len) {
+	uint8_t crc = 0xFF;
+
+	for (uint8_t k = 0; k < len; ++k) {
+		crc ^= data[k];
+		for (uint8_t l = 0; l < 8; ++l) {
+			if (crc & 0x80) {
+				crc = ((crc << 1) ^ 0x31);
+			} else {
+				crc = (crc << 1);
+			}
+		}
+	}
+	return (crc);
 }
 
 int main() {
 	uint8_t raw[7] = {};
+	uint8_t crc = 0;
 
 	uart_init(UBRR);
 	i2c_init();
@@ -146,6 +163,20 @@ int main() {
 		aht_trigger();
 		_delay_ms(80.0);
 		aht_read(raw);
+
+		crc = crc8(raw, 6);
+		if (crc != raw[6]) {
+			for (int k = 0; k < 7; ++k) {
+				print_hex_value(raw[k]);
+				uart_printstr(" ");
+			}
+			uart_printstr("Invalid crc\r\n");
+			print_hex_value(crc);
+			uart_printstr(" ");
+			print_hex_value(raw[6]);
+			uart_printstr("\r\n\n");
+			continue;
+		}
 		
 		uint32_t raw_temp = 0;
 		raw_temp = raw_temp | (((uint32_t)raw[3] & 0xF) << 16);
