@@ -108,14 +108,6 @@ void i2c_read(void)
 	print_hex_value(TWDR);
 }
 
-// void aht_status() {
-// 	i2c_start();
-// 	i2c_write(0x38 << 1 | 1);
-// 	i2c_write(0x71);
-// 	i2c_read();
-// 	i2c_stop();
-// }
-
 void aht_trigger() {
 	i2c_start();
 	i2c_write(0x38 << 1 | 0);

@@ -24,8 +24,8 @@ void uart_init(unsigned int ubrr) {
 	UBRR0H = (unsigned char) (ubrr >> 8);
 	UBRR0L = (unsigned char) ubrr;
 
-	//Enable reveiver and transmitter
-	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
+	//Enable transmitter
+	UCSR0B = (1 << TXEN0);
 
 	//Sets the frame format: 8N1 (Disabled parity & 1 stop bit are defaults)
 	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
@@ -37,23 +37,11 @@ void uart_tx(unsigned char data) {
 	UDR0 = data;
 }
 
-unsigned int uart_rx(void) {
-	while (!(UCSR0A & (1 << RXC0)))
-		;
-	return UDR0;
-}
-
 void uart_printstr(char *s) {
 	while (*s) {
 		uart_tx(*s);
 		s++;
 	}
-}
-
-void uart_flush() {
-	unsigned char dummy;
-	while (UCSR0A & (1 << RXC0))
-		dummy = UDR0;
 }
 
 char get_nibble(uint8_t n) {
@@ -65,7 +53,7 @@ char get_nibble(uint8_t n) {
 	);
 }
 
-void print_hex_value(char v) {
+void uart_put_hex(char v) {
 	uart_tx(get_nibble(v >> 4));
 	uart_tx(get_nibble(v >> 0));
 }
@@ -212,7 +200,7 @@ int main() {
 	uint8_t status = aht_status();
 
 	uart_printstr("Initial status: ");
-	print_hex_value(status);
+	uart_put_hex(status);
 	uart_printstr("\n\r");
 
 	if (!(status & (1 << 3))) {
@@ -232,9 +220,9 @@ int main() {
 		crc = crc8(raw, 6);
 		if (crc != raw[6]) {
 			uart_printstr("Invalid crc\r\n");
-			print_hex_value(crc);
+			uart_put_hex(crc);
 			uart_printstr(" ");
-			print_hex_value(raw[6]);
+			uart_put_hex(raw[6]);
 			uart_printstr("\r\n\n");
 			continue;
 		}

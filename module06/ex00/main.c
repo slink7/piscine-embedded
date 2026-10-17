@@ -1,8 +1,6 @@
 
 #include <avr/io.h>
 #include <util/twi.h>
-#include <stdint.h>
-#include <util/delay.h>
 
 #ifndef F_CPU
 #define F_CPU 16000000UL
@@ -13,6 +11,8 @@
 #endif
 
 #define UBRR (F_CPU + UART_BAUDRATE * 8UL) / (16UL * UART_BAUDRATE) - 1
+
+#define F_SCL 100000
 
 void uart_init(unsigned int ubrr) {
 	//Sets the baud rate
@@ -61,8 +61,8 @@ char get_nibble(uint8_t n) {
 }
 
 void uart_hex_byte(uint8_t v) {
-	uart_tx(get_nibble(v >> 0));
 	uart_tx(get_nibble(v >> 4));
+	uart_tx(get_nibble(v >> 0));
 }
 
 
@@ -85,14 +85,16 @@ void i2c_start(void)
 void i2c_stop(void)
 {
 	TWCR = (1 << TWINT) | (1 << TWSTO) | (1 << TWEN);
-	while (TWCR & (1 << TWSTO))
-		;
+	i2c_wait();
 	uart_hex_byte(TW_STATUS);
 }
 
 void i2c_init(void) {
+	//Control register
 	TWCR = 0;
-	TWBR = 72;
+	// TWBR = 72
+	TWBR = (F_CPU) / (2 * F_SCL) - 8;
+	// Status register
 	TWSR = 0x00;
 	TWCR = (1 << TWEN);
 }
