@@ -109,12 +109,20 @@ uint8_t i2c_read(uint8_t ack)
 	return (TWDR);
 }
 
-void aht_status() {
+uint8_t aht_status() {
+	uint8_t out;
+
+	i2c_start();
+	i2c_write(0x38 << 1 | 0);
+	i2c_write(0x71);
+	i2c_stop();
+
 	i2c_start();
 	i2c_write(0x38 << 1 | 1);
-	i2c_write(0x71);
-	i2c_read(0);
+	out = i2c_read(0);
 	i2c_stop();
+	
+	return (out);
 }
 
 void aht_trigger() {
@@ -134,6 +142,16 @@ void aht_read(uint8_t buff[7]) {
 	i2c_stop();
 }
 
+void aht_init() {
+	i2c_start();
+	i2c_write(0x38 << 1 | 0);
+	i2c_write(0xBE);
+	i2c_write(0x08);
+	i2c_write(0x00);
+	i2c_stop();
+	_delay_ms(10.0);
+}
+
 uint8_t crc8(const uint8_t *data, uint8_t len) {
 	uint8_t crc = 0xFF;
 
@@ -150,13 +168,54 @@ uint8_t crc8(const uint8_t *data, uint8_t len) {
 	return (crc);
 }
 
+uint32_t get_bits(uint8_t *data, uint8_t boff, uint8_t blen) {
+	uint32_t raw_out = 0;
+
+	for (uint8_t k = 0; k < blen; ++k) {
+		uint8_t bit_pos = boff + k;
+		uint8_t byte_index = bit_pos / 8;
+		uint8_t bit_index = 7 - (bit_pos % 8);
+		raw_out = (raw_out << 1) | ((data[byte_index] >> bit_index) & 1u);
+	}
+
+	return (raw_out);
+}
+
+double get_temperature(uint8_t *data) {
+	return (200.0 * (double)get_bits(data, 28, 20) / 1048576.0 - 50.0);
+}
+
+double get_humidity(uint8_t *data) {
+	return (100.0 * (double)get_bits(data, 8, 20) / 1048576.0);
+}
+
+double mean(double *arr, uint8_t len) {
+	double sum = 0.0;
+	for (uint8_t k = 0; k < len; ++k)
+		sum += arr[k];
+	return (sum / (double)len);
+}
+
 int main() {
 	uint8_t raw[7] = {};
 	uint8_t crc = 0;
+	double temperatures[3] = {};
+	double humidities[3] = {};
 
 	uart_init(UBRR);
 	i2c_init();
 	_delay_ms(100.0);
+
+	uint8_t status = aht_status();
+
+	print_hex_value(status);
+
+	if (!(status & (1 << 3))) {
+		uart_printstr("Initilizing...\n\r");
+		aht_init();
+	}
+
+	uint8_t counter = 0;
 
 	while (1) {
 		_delay_ms(10.0);
@@ -166,10 +225,6 @@ int main() {
 
 		crc = crc8(raw, 6);
 		if (crc != raw[6]) {
-			for (int k = 0; k < 7; ++k) {
-				print_hex_value(raw[k]);
-				uart_printstr(" ");
-			}
 			uart_printstr("Invalid crc\r\n");
 			print_hex_value(crc);
 			uart_printstr(" ");
@@ -177,26 +232,33 @@ int main() {
 			uart_printstr("\r\n\n");
 			continue;
 		}
-		
-		uint32_t raw_temp = 0;
-		raw_temp = raw_temp | (((uint32_t)raw[3] & 0xF) << 16);
-		raw_temp = raw_temp | ((uint32_t)raw[4] << 8);
-		raw_temp = raw_temp | raw[5];
 
-		double raw_temp2 = raw_temp;
+		// Read humidity
+		for (uint8_t k = 0; k < 2; ++k)
+			humidities[k] = humidities[k + 1];
+		humidities[2] = get_humidity(raw);
 
-		double temp = (raw_temp2 / 1048576.0) * 200.0 - 50.0;
+		// Read temperatures
+		for (uint8_t k = 0; k < 2; ++k)
+			temperatures[k] = temperatures[k + 1];
+		temperatures[2] = get_temperature(raw);
 
+		// continue if not enough samples to mean
+		if (counter++ < 2)
+			continue ;
+
+		// Display the means
 		char buff[64] = {};
-
-		dtostrf(temp, 0x10, 0x4, buff);
-
+		dtostrf(mean(humidities, 3), 0x3, 0x3, buff);
 		uart_printstr(buff);
-		uart_printstr("\r\n");
+		uart_printstr("%, ");
+		dtostrf(mean(temperatures, 3), 0x3, 0x2, buff);
+		uart_printstr(buff);
+		uart_printstr("C, \r\n");
 
 		//0b00011001
 
 
-		_delay_ms(1000.0);
+		// _delay_ms(1000.0);
 	}
 }
