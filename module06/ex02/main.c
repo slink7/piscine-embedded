@@ -15,6 +15,10 @@
 
 #define UBRR (F_CPU + UART_BAUDRATE * 8UL) / (16UL * UART_BAUDRATE) - 1
 
+#define AHT_ADDR 0x38
+
+#define SAMPLES 3
+
 void uart_init(unsigned int ubrr) {
 	//Sets the baud rate
 	UBRR0H = (unsigned char) (ubrr >> 8);
@@ -113,12 +117,12 @@ uint8_t aht_status() {
 	uint8_t out;
 
 	i2c_start();
-	i2c_write(0x38 << 1 | 0);
+	i2c_write(AHT_ADDR << 1 | TW_WRITE);
 	i2c_write(0x71);
 	i2c_stop();
 
 	i2c_start();
-	i2c_write(0x38 << 1 | 1);
+	i2c_write(AHT_ADDR << 1 | TW_READ);
 	out = i2c_read(0);
 	i2c_stop();
 	
@@ -127,7 +131,7 @@ uint8_t aht_status() {
 
 void aht_trigger() {
 	i2c_start();
-	i2c_write(0x38 << 1 | 0);
+	i2c_write(AHT_ADDR << 1 | TW_WRITE);
 	i2c_write(0xAC);
 	i2c_write(0x33);
 	i2c_write(0x00);
@@ -136,7 +140,7 @@ void aht_trigger() {
 
 void aht_read(uint8_t buff[7]) {
 	i2c_start();
-	i2c_write(0x38 << 1 | 1);
+	i2c_write(AHT_ADDR << 1 | TW_READ);
 	for (int k = 0; k < 7; ++k)
 		buff[k] = i2c_read(k < 6);
 	i2c_stop();
@@ -144,12 +148,11 @@ void aht_read(uint8_t buff[7]) {
 
 void aht_init() {
 	i2c_start();
-	i2c_write(0x38 << 1 | 0);
+	i2c_write(AHT_ADDR << 1 | TW_WRITE);
 	i2c_write(0xBE);
 	i2c_write(0x08);
 	i2c_write(0x00);
 	i2c_stop();
-	_delay_ms(10.0);
 }
 
 uint8_t crc8(const uint8_t *data, uint8_t len) {
@@ -199,8 +202,8 @@ double mean(double *arr, uint8_t len) {
 int main() {
 	uint8_t raw[7] = {};
 	uint8_t crc = 0;
-	double temperatures[3] = {};
-	double humidities[3] = {};
+	double temperatures[SAMPLES] = {};
+	double humidities[SAMPLES] = {};
 
 	uart_init(UBRR);
 	i2c_init();
@@ -208,11 +211,14 @@ int main() {
 
 	uint8_t status = aht_status();
 
+	uart_printstr("Initial status: ");
 	print_hex_value(status);
+	uart_printstr("\n\r");
 
 	if (!(status & (1 << 3))) {
 		uart_printstr("Initilizing...\n\r");
 		aht_init();
+		_delay_ms(10.0);
 	}
 
 	uint8_t counter = 0;
@@ -234,31 +240,30 @@ int main() {
 		}
 
 		// Read humidity
-		for (uint8_t k = 0; k < 2; ++k)
+		for (uint8_t k = 0; k < (SAMPLES - 1); ++k)
 			humidities[k] = humidities[k + 1];
-		humidities[2] = get_humidity(raw);
+		humidities[SAMPLES - 1] = get_humidity(raw);
 
 		// Read temperatures
-		for (uint8_t k = 0; k < 2; ++k)
+		for (uint8_t k = 0; k < (SAMPLES - 1); ++k)
 			temperatures[k] = temperatures[k + 1];
-		temperatures[2] = get_temperature(raw);
+		temperatures[SAMPLES - 1] = get_temperature(raw);
 
 		// continue if not enough samples to mean
-		if (counter++ < 2)
+		if (counter++ < (SAMPLES - 1))
 			continue ;
 
 		// Display the means
-		char buff[64] = {};
-		dtostrf(mean(humidities, 3), 0x3, 0x3, buff);
+		char buff[8] = {};
+		
+		dtostrf(mean(humidities, SAMPLES), 0x7, 0x3, buff);
+		uart_printstr("Humidity: ");
 		uart_printstr(buff);
 		uart_printstr("%, ");
-		dtostrf(mean(temperatures, 3), 0x3, 0x2, buff);
+
+		dtostrf(mean(temperatures, SAMPLES), 0x7, 0x2, buff);
+		uart_printstr("Temperature: ");
 		uart_printstr(buff);
-		uart_printstr("C, \r\n");
-
-		//0b00011001
-
-
-		// _delay_ms(1000.0);
+		uart_printstr("°C\r\n");
 	}
 }
