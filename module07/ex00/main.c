@@ -10,6 +10,7 @@ uint8_t eeprom_read(uint16_t addr) {
 	// Set address
 	EEAR = addr;
 	// Start read mode
+	EECR |= (1 << EERE);
 	
 	return (EEDR);
 }
@@ -22,18 +23,17 @@ int main(void) {
 	
 	uart_init(UBRR);
 
+	uint8_t line[BPL] = {};
 	for (uint8_t l = 0; l < LINES; ++l) {
 		uart_print_ui32(BPL * l);
-		uart_tx(' ');
-
-		uint8_t line[16] = {};
+		uart_printstr("  ");
 
 		for (uint8_t k = 0; k < BPL; ++k)
 			line[k] = eeprom_read(l * BPL + k);
 
 		for (uint8_t k = 0; k < BPL; ++k) {
 			uart_print_byte(line[k]);
-			uart_tx(' ');
+			uart_printstr((k % 8 == 7) ? "  " : " ");
 		}
 
 		uart_tx('|');
@@ -41,4 +41,6 @@ int main(void) {
 			uart_print_pchar(line[k]);
 		uart_printstr("|\r\n");
 	}
+	uart_print_ui32(BPL * LINES);
 }
+
