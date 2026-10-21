@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <util/crc16.h>
 
@@ -16,7 +17,7 @@
 #define OFFSET_CRC		0x40
 
 const uint16_t node_slots[] = {
-	0x042, 0x111, 0x2B2, 0x300
+	0x064, 0x111, 0x282, 0x300
 };
 const uint8_t slot_count = sizeof(node_slots) / sizeof(uint16_t);
 
@@ -45,59 +46,67 @@ uint8_t eeprom_read_node(uint16_t addr, node *n) {
 	return (1);
 }
 
-// uint16_t crc16(const uint8_t *data, uint8_t len) {
-// 	uint16_t crc = 0xFFFF;
-//
-// 	for (uint8_t k = 0; k < len; ++k) {
-// 		crc ^= data[k];
-// 		for (uint8_t l = 0; l < 8; ++l) {
-// 			if (crc & 0x8000) {
-// 				crc = ((crc << 1) ^ 0x1DCF);
-// 			} else {
-// 				crc = (crc << 1);
-// 			}
-// 		}
-// 	}
-// 	return (crc);
-// }
-
-uint16_t crc16(uint8_t *data, uint8_t len) {
+uint16_t crc16(const uint8_t *data, uint8_t len) {
 	uint16_t crc = 0xFFFF;
 
 	for (uint8_t k = 0; k < len; ++k) {
-		crc = _crc16_update(crc, data[k]);
+		crc ^= data[k];
+		for (uint8_t l = 0; l < 8; ++l) {
+			if (crc & 0x8000) {
+				crc = ((crc << 1) ^ 0x1DCF);
+			} else {
+				crc = (crc << 1);
+			}
+		}
 	}
 	return (crc);
 }
+
+// uint16_t crc16(uint8_t *data, uint8_t len) {
+// 	uint16_t crc = 0xFFFF;
+//
+// 	for (uint8_t k = 0; k < len; ++k) {
+// 		crc = _crc16_update(crc, data[k]);
+// 	}
+// 	return (crc);
+// }
 
 uint16_t node_crc16(node *n) {
 	return (crc16(((uint8_t *)&n) + sizeof(uint8_t), sizeof(node) - sizeof(uint8_t) - sizeof(uint16_t)));
 }
 
-void locate_data() {
-	node n;
+void uart_mem(void *ptr, uint8_t len) {
+	for (uint8_t k = 0; k < len; ++k) {
+		uart_print_byte(((uint8_t*)ptr)[k]);
+		uart_printstr(" ");
+	}
+}
 
+void locate_data() {
 	current_slot = NOT_SET;
 	for (uint8_t k = 0; k < slot_count; ++k) {
-		uart_printstr("mgk: ");
 		uart_print_byte(eeprom_read(node_slots[k]));
 		uart_printstr("\n\r");
 		if (eeprom_read(node_slots[k]) != MAGIC)
 			continue ;
-		uart_printstr("Found Magic\r\n");
-		eeprom_read_node(node_slots[k], &n);
-		if (node_crc16(&n) == n.crc && n.magic == MAGIC) {
+		eeprom_read_node(node_slots[k], &g_n);
+		if (node_crc16(&g_n) == g_n.crc && g_n.magic == MAGIC) {
 			current_slot = node_slots[k];
-			uart_printstr("Found slot\r\n");
 			return ;
 		}
 	}
 }
 
 void save_gnode() {
-	if (current_slot == NOT_SET)
-		current_slot = node_slots[0];
+	if (current_slot == NOT_SET) {
+		current_slot = node_slots[1];
+		g_n.magic = MAGIC;
+	}
 
+	g_n.crc = node_crc16(&g_n);
+
+	uart_mem(&g_n, sizeof(node));
+	uart_printstr("\n\r");
 	uint8_t success = eeprom_write_node(current_slot, &g_n);
 
 	if (success)
@@ -123,23 +132,22 @@ void save_gnode() {
 	uart_printstr("Done.");
 }
 
-uint8_t parse_udec(uintmax_t *out, char *str, uintmax_t max) {
-	*out = 0;
-	for (uint8_t k = 0; str[k] >= '0' && str[k] <= '9'; ++k) {
-		if (*out > (max + '0' - str[k]) / 10)
-			return (0);
-		*out = *out * 10 + str[k] - '0';
-	}
-	return (1);
+uintmax_t parse_udec(char *str) {
+	uintmax_t out = 0;
+
+	for (uint8_t k = 0; (str[k] >= '0') && (str[k] <= '9'); ++k)
+		out = out * 10 + str[k] - '0';
+	return (out);
 }
 
-intmax_t parse_idec(intmax_t *out, char *str) {
-	uintmax_t tmp = 0;
+uintmax_t parse_idec(char *str) {
+	uintmax_t out = 0;
+	uint8_t	sign = 0;
 
-	if (!parse_udec(&tmp, str + (str[0] == '-')))
-		return (0);
-	*out = (str[0] == '-') ? -tmp : tmp;
-	return (1);
+	if (str[0] == '-')
+		sign = 1;
+	out = parse_udec(str + sign);
+	return (sign ? -out : out);
 }
 
 int8_t parse_i16_dec(int16_t *out, char *str) {
@@ -147,16 +155,18 @@ int8_t parse_i16_dec(int16_t *out, char *str) {
 
 	if (tmp > INT16_MAX || tmp < INT16_MIN)
 		return (0);
+
 	*out = (int16_t)tmp;
 	return (1);
 }
 
 int8_t parse_u32_dec(uint32_t *out, char *str) {
 	intmax_t tmp = parse_udec(str);
-
-	if (tmp > INT32_MAX)
+	
+	if (tmp > UINT32_MAX)
 		return (0);
-	*out = (uint32_t)tmp;
+
+	*out = (int32_t)tmp;
 	return (1);
 }
 
@@ -171,9 +181,17 @@ uint8_t handle_command(char *cmd) {
 			return (0);
 		}
 
+		uart_mem(&g_n, sizeof(node));
+		uart_printstr("\r\n");
 		eeprom_read_node(current_slot, &g_n);
+		uart_mem(&g_n, sizeof(node));
+		uart_printstr("\r\n");
 		if (node_crc16(&g_n) != g_n.crc) {
 			uart_printstr("CRITICAL: Data corruption detected!\r\n");
+			uart_print_uhex(node_crc16(&g_n), 4);
+			uart_printstr(" != ");
+			uart_print_uhex(g_n.crc, 4);
+			uart_printstr("\r\n");
 			return (0);
 		}
 
@@ -194,17 +212,37 @@ uint8_t handle_command(char *cmd) {
 		uart_printstr(g_n.tag);
 		uart_printstr("\r\n");
 
+	// } else if (!ft_strncmp(cmd, "ST TUS ", 7)) {
+	//
+	// 	uart_printstr("TEST");
+	//
 	} else if (!ft_strncmp(cmd, "SET_ID ", 7)) {
 		// ===========================================
 		//		SET_ID
 		// ===========================================
-			
+		
+		if (parse_u32_dec(&g_n.id, cmd + 7)) {
+			uart_printstr("Set ID to ");
+			uart_print_udec(g_n.id);
+			uart_printstr("\r\n");
+			return (1);
+		}
+
+		uart_printstr("Syntax Error: u32 out of bounds\r\n");
 
 	} else if (!ft_strncmp(cmd, "SET_PRIO ", 9)) {
 		// ===========================================
 		//		SET_PRIO
 		// ===========================================
-		
+
+		if (parse_i16_dec(&g_n.priority, cmd + 9)) {
+			uart_printstr("Set priority to ");
+			uart_print_idec(g_n.priority);
+			uart_printstr("\r\n");
+			return (1);
+		}
+
+		uart_printstr("Error: i16 out of bounds\r\n");
 
 	} else if (!ft_strncmp(cmd, "SET_TAG ", 8)) {
 		// ===========================================
@@ -233,7 +271,9 @@ uint8_t handle_command(char *cmd) {
 		// ===========================================
 		eeprom_hexdump_C();
 	} else {
-		uart_printstr("\t\tINVALID COMMAND\r\n");	
+		uart_printstr("\t\tINVALID COMMAND\r\n");
+		uart_printstr(cmd);
+		uart_printstr("\r\n");
 	}
 	return (0);
 }
@@ -248,8 +288,8 @@ int main(void) {
 		uart_printstr("=> ");
 		uart_read(input, INPUT_SIZE);
 		uart_printstr("\n\r");
-		handle_command(input);
-		
+		if (handle_command(input))
+			save_gnode();
 		// eeprom_hexdump_C();
 	}
 	return (0);
