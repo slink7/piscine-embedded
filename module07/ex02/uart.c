@@ -13,7 +13,7 @@ void uart_init(uint16_t ubrr) {
 	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 }
 
-void uart_tx(unsigned char data) {
+void uart_tx(char data) {
 	while (!(UCSR0A & (1 << UDRE0)))
 		;
 	UDR0 = data;
@@ -26,7 +26,7 @@ void uart_printstr(char *s) {
 	}
 }
 
-uint8_t uart_rx(void) {
+char uart_rx(void) {
 	while (!(UCSR0A & (1 << RXC0)))
 		;
 	return UDR0;
@@ -53,18 +53,53 @@ void uart_print_byte(uint8_t byte) {
 	uart_tx(get_nibble(byte >> 0));
 }
 
-void uart_print_ui32(uint32_t ui32) {
+void uart_print_u32(uint32_t u32) {
 	for (uint8_t k = 0; k < 8; ++k)
-		uart_tx(get_nibble(ui32 >> (4 * (7 - k))));
+		uart_tx(get_nibble(u32 >> (4 * (7 - k))));
+}
+
+void uart_print_u16(uint16_t u16) {
+	for (uint8_t k = 0; k < 4; ++k)
+		uart_tx(get_nibble(u16 >> (4 * (3 - k))));
+}
+
+void uart_print_i16(int16_t i16) {
+	if (i16 < 0)
+		uart_tx('-');
+	uart_print_u16((uint16_t) -i16);
+}
+
+void uart_print_uhex(uintmax_t umax, uint8_t len) {
+	for (uint8_t k = 0; k < len;++k) {
+		uart_tx(get_nibble(umax >> (4 * (len - 1 - k))));
+	}
+}
+
+void uart_print_ihex(intmax_t imax, uint8_t len) {
+	if (imax < 0)
+		uart_tx('-');
+	uart_print_uhex((imax >= 0) ? imax : -imax, len);
+}
+
+void uart_print_udec(intmax_t umax) {
+	if (umax / 10 > 0)
+		uart_print_udec(umax / 10);
+	uart_tx('0' + (umax % 10));
+}
+
+void uart_print_idec(intmax_t imax) {
+	if (imax < 0)
+		uart_tx('-');
+	uart_print_udec((imax >= 0) ? imax : -imax);
 }
 
 void uart_print_pchar(char c) {
 	uart_tx((c >= 32 && c < 127) ? c : '.');
 }
 
-void uart_read(uint8_t *buffer, uint8_t bsize) {
+void uart_read(char *buffer, uint8_t bsize) {
 	uint8_t at = 0;
-	uint8_t in = 0;
+	char in = 0;
 	do {
 		in = uart_rx();
 		if (in == '\e') {

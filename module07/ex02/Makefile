@@ -18,7 +18,8 @@ CFLAGS=\
 SRCS=\
 	main.c\
 	uart.c\
-	eeprom.c
+	eeprom.c\
+	utils.c
 
 DEPS=$(SRCS:.c=.d)
 

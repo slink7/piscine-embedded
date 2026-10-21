@@ -1,5 +1,4 @@
 #include "eeprom.h"
-#include <stdint.h>
 
 uint8_t eeprom_read(uint16_t addr) {
 	// Wait for previous write
@@ -38,7 +37,7 @@ uint8_t eeprom_write(uint16_t addr, uint8_t byte) {
 
 uint8_t eeprom_memcpy_w(uint16_t dst, void *src, uint8_t len) {
 	if (dst + len > EELEN)
-		return (0);
+		return (1);
 	for (uint8_t k = 0; k < len; ++k) {
 		if (!eeprom_write(dst + k, ((uint8_t *)src)[k]))
 			return (0);
@@ -57,7 +56,7 @@ void eeprom_memcpy_r(uint16_t src, void *dst, uint8_t len) {
 
 void eeprom_hexdump(uint16_t ha) {
 	for (uint8_t l = 0; l < LINES; ++l) {
-		uart_print_ui32(BPL * l);
+		uart_print_u32(BPL * l);
 		uart_tx(' ');
 
 		for (uint8_t k = 0; k < BPL; ++k) {
@@ -72,14 +71,14 @@ void eeprom_hexdump(uint16_t ha) {
 
 		uart_printstr("\r\n");
 	}
-	uart_print_ui32(BPL * LINES);
+	uart_print_u32(BPL * LINES);
 	uart_printstr("\r\n");
 }
 
 void eeprom_hexdump_C() {
 	uint8_t line[BPL] = {};
 	for (uint8_t l = 0; l < LINES; ++l) {
-		uart_print_ui32(BPL * l);
+		uart_print_u32(BPL * l);
 		uart_printstr("  ");
 
 		for (uint8_t k = 0; k < BPL; ++k)
@@ -95,5 +94,6 @@ void eeprom_hexdump_C() {
 			uart_print_pchar(line[k]);
 		uart_printstr("|\r\n");
 	}
-	uart_print_ui32(BPL * LINES);
+	uart_print_u32(BPL * LINES);
+	uart_printstr("\r\n");
 }
