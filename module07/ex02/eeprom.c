@@ -14,7 +14,7 @@ uint8_t eeprom_read(uint16_t addr) {
 		;
 	// Set address
 	EEAR = addr;
-	// Start read mode
+	// Read byte
 	EECR |= (1 << EERE);
 	
 	return (EEDR);
@@ -29,10 +29,10 @@ void eeprom_force_write(uint16_t addr, uint8_t byte) {
 	EEAR = addr;
 	EEDR = byte;
 
-	//
+	// Master write enable
 	EECR |= (1 << EEMPE);
 
-	// Start write mode
+	// Write byte
 	EECR |= (1 << EEPE);
 }
 
