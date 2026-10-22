@@ -1,4 +1,12 @@
 #include "eeprom.h"
+#include <stdint.h>
+
+// DEBUG TESTING EEPROM CORRUPTION
+static const uint16_t corrupted_addresses[] = {
+	0x064 + 2, 0x111 + 2, 0x282 + 2, 0x300 + 2
+};
+// DEBUG TESTING EEPROM CORRUPTION
+uint8_t debug_corrution = 0x00;
 
 uint8_t eeprom_read(uint16_t addr) {
 	// Wait for previous write
@@ -31,6 +39,13 @@ void eeprom_force_write(uint16_t addr, uint8_t byte) {
 uint8_t eeprom_write(uint16_t addr, uint8_t byte) {
 	if (eeprom_read(addr) == byte)
 		return (1);
+	// DEBUG TESTING EEPROM CORRUPTION
+	for (uint8_t k = 0; k < 4; ++k) {
+		if (((debug_corrution >> k) & 1) && (addr == corrupted_addresses[k])) {
+			uart_printstr("Artificial corruption triggered\r\n");
+			return (0);
+		}
+	}
 	eeprom_force_write(addr, byte);
 	return (eeprom_read(addr) == byte);
 }

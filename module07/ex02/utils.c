@@ -24,3 +24,7 @@ void ft_memcpy(void *dst, void *src, uint8_t len) {
 		((uint8_t*)dst)[k] = ((uint8_t*)src)[k];
 }
 
+void ft_memset(void *dst, uint8_t src, uint8_t len) {
+	for (uint8_t k = 0; k < len; ++k)
+		((uint8_t*)dst)[k] = src;
+}

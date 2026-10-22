@@ -5,6 +5,9 @@
 
 #include "uart.h"
 
+// DEBUG TESTING EEPROM CORRUPTION
+extern uint8_t debug_corrution;
+
 uint8_t eeprom_read(uint16_t addr);
 void eeprom_force_write(uint16_t addr, uint8_t byte);
 uint8_t eeprom_write(uint16_t addr, uint8_t byte);

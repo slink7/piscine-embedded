@@ -33,9 +33,17 @@ typedef struct node {
 
 node g_n = {};
 
+void uart_mem(void *ptr, uint8_t len) {
+	for (uint8_t k = 0; k < len; ++k) {
+		uart_print_byte(((uint8_t*)ptr)[k]);
+		uart_printstr(" ");
+	}
+}
+
 uint8_t eeprom_write_node(uint16_t addr, node *n) {
 	if (!n)
 		return (0);
+	uart_printstr("Writing to eeprom\r\n");
 	return (eeprom_memcpy_w(addr, n, sizeof(node)));
 }
 
@@ -72,21 +80,12 @@ uint16_t crc16(const uint8_t *data, uint8_t len) {
 // }
 
 uint16_t node_crc16(node *n) {
-	return (crc16(((uint8_t *)&n) + sizeof(uint8_t), sizeof(node) - sizeof(uint8_t) - sizeof(uint16_t)));
-}
-
-void uart_mem(void *ptr, uint8_t len) {
-	for (uint8_t k = 0; k < len; ++k) {
-		uart_print_byte(((uint8_t*)ptr)[k]);
-		uart_printstr(" ");
-	}
+	return (crc16(((uint8_t *)n) + sizeof(uint8_t), sizeof(node) - sizeof(uint8_t) - sizeof(uint16_t)));
 }
 
 void locate_data() {
 	current_slot = NOT_SET;
 	for (uint8_t k = 0; k < slot_count; ++k) {
-		uart_print_byte(eeprom_read(node_slots[k]));
-		uart_printstr("\n\r");
 		if (eeprom_read(node_slots[k]) != MAGIC)
 			continue ;
 		eeprom_read_node(node_slots[k], &g_n);
@@ -99,14 +98,12 @@ void locate_data() {
 
 void save_gnode() {
 	if (current_slot == NOT_SET) {
-		current_slot = node_slots[1];
+		current_slot = node_slots[0];
 		g_n.magic = MAGIC;
 	}
 
 	g_n.crc = node_crc16(&g_n);
 
-	uart_mem(&g_n, sizeof(node));
-	uart_printstr("\n\r");
 	uint8_t success = eeprom_write_node(current_slot, &g_n);
 
 	if (success)
@@ -120,12 +117,14 @@ void save_gnode() {
 		success = eeprom_write_node(node_slots[k], &g_n);
 		if (success) {
 			uart_printstr("Success\r\n");
+			current_slot = node_slots[k];
 			break ;
 		}
 
 		uart_printstr("Fail\r\n");
 		if (k == (slot_count - 1)) {
 			uart_printstr("CRITICAL EEPROM FAILURE.\r\n");
+			current_slot = NOT_SET;
 			return ;
 		}
 	}
@@ -170,6 +169,19 @@ int8_t parse_u32_dec(uint32_t *out, char *str) {
 	return (1);
 }
 
+uint8_t is_valid(char *str, uint8_t len) {
+	for (uint8_t k = 0; str[k] && k < len; ++k) {
+		if (
+			!((str[k] >= 'A' && str[k] <= 'Z')
+			|| (str[k] >= 'a' && str[k] <= 'z')
+			|| (str[k] >= '0' && str[k] <= '9')
+			|| str[k] == '-' || str[k] == '_')
+		)
+			return (0);
+	}
+	return (1);
+}
+
 uint8_t handle_command(char *cmd) {
 	if (!ft_strncmp(cmd, "STATUS", 7)) {
 		// ===========================================
@@ -181,11 +193,7 @@ uint8_t handle_command(char *cmd) {
 			return (0);
 		}
 
-		uart_mem(&g_n, sizeof(node));
-		uart_printstr("\r\n");
 		eeprom_read_node(current_slot, &g_n);
-		uart_mem(&g_n, sizeof(node));
-		uart_printstr("\r\n");
 		if (node_crc16(&g_n) != g_n.crc) {
 			uart_printstr("CRITICAL: Data corruption detected!\r\n");
 			uart_print_uhex(node_crc16(&g_n), 4);
@@ -201,21 +209,17 @@ uint8_t handle_command(char *cmd) {
 		uart_printstr("\r\n");
 
 		uart_printstr("ID: ");
-		uart_print_uhex(g_n.id, 4);
+		uart_print_udec(g_n.id);
 		uart_printstr("\r\n");
 
 		uart_printstr("priority: ");
-		uart_print_ihex(g_n.priority, 4);
+		uart_print_idec(g_n.priority);
 		uart_printstr("\r\n");
 
 		uart_printstr("Tag: ");
 		uart_printstr(g_n.tag);
 		uart_printstr("\r\n");
 
-	// } else if (!ft_strncmp(cmd, "ST TUS ", 7)) {
-	//
-	// 	uart_printstr("TEST");
-	//
 	} else if (!ft_strncmp(cmd, "SET_ID ", 7)) {
 		// ===========================================
 		//		SET_ID
@@ -257,7 +261,12 @@ uint8_t handle_command(char *cmd) {
 			uart_printstr("Syntax Error: error with 2nd '\"'\r\n");
 			return (0);
 		}
+		if (!is_valid(cmd + 9, len - 1)) {
+			uart_printstr("Syntax Error: use of invalid chars\r\n");
+			return (0);
+		}
 		ft_memcpy(&g_n.tag, cmd + 9, len - 1);
+		g_n.tag[len - 1] = '\0';
 		return (1);
 
 	} else if (!ft_strncmp(cmd, "FACTORY_RESET", 15)) {
@@ -265,11 +274,39 @@ uint8_t handle_command(char *cmd) {
 		//		FACTORY_RESET
 		// ===========================================
 
+		if (current_slot != NOT_SET)
+			eeprom_write(current_slot, MAGIC + 1);
+		
+		current_slot = NOT_SET;
+		ft_memset(&g_n, 0, sizeof(node));
+		return (0);
+		
 	} else if (!ft_strncmp(cmd, "PRINT", 6)) {
 		// ===========================================
 		//		PRINT
 		// ===========================================
 		eeprom_hexdump_C();
+	} else if (!ft_strncmp(cmd, "DEBUG ", 6)) {
+		// ===========================================
+		//		DEBUG
+		// ===========================================
+		
+		uint8_t arg = (cmd[6] >= '0' && cmd[6] <= '9')
+			? cmd[6] - '0'
+			: (cmd[6] >= 'A' && cmd[6] <= 'F')
+			? cmd[6] - 'A' + 10
+			: (cmd[6] >= 'a' && cmd[6] <= 'f')
+			? cmd[6] - 'a' + 10
+			: 0xFF
+		;
+
+		if (arg == 0xFF || cmd[7] != '\0') {
+			uart_printstr("Syntax Error\r\n");
+			return (0);
+		}
+
+		debug_corrution = arg;
+			
 	} else {
 		uart_printstr("\t\tINVALID COMMAND\r\n");
 		uart_printstr(cmd);
@@ -281,6 +318,7 @@ uint8_t handle_command(char *cmd) {
 int main(void) {
 	uart_init(UBRR);
 
+	ft_memset(&g_n, 0, sizeof(node));
 	locate_data();
 
 	char input[INPUT_SIZE + 1] = {};
