@@ -70,15 +70,6 @@ uint16_t crc16(const uint8_t *data, uint8_t len) {
 	return (crc);
 }
 
-// uint16_t crc16(uint8_t *data, uint8_t len) {
-// 	uint16_t crc = 0xFFFF;
-//
-// 	for (uint8_t k = 0; k < len; ++k) {
-// 		crc = _crc16_update(crc, data[k]);
-// 	}
-// 	return (crc);
-// }
-
 uint16_t node_crc16(node *n) {
 	return (crc16(((uint8_t *)n) + sizeof(uint8_t), sizeof(node) - sizeof(uint8_t) - sizeof(uint16_t)));
 }
@@ -128,7 +119,7 @@ void save_gnode() {
 			return ;
 		}
 	}
-	uart_printstr("Done.");
+	uart_printstr("Done.\n\r");
 }
 
 uintmax_t parse_udec(char *str) {
@@ -328,7 +319,6 @@ int main(void) {
 		uart_printstr("\n\r");
 		if (handle_command(input))
 			save_gnode();
-		// eeprom_hexdump_C();
 	}
 	return (0);
 }
