@@ -2,7 +2,6 @@
 #define UTILS_H
 
 #include <avr/io.h>
-#include <stdint.h>
 
 int8_t ft_strncmp(char *a, char *b, uint8_t n);
 uint8_t ft_strlen(char *str);

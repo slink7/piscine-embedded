@@ -1,12 +1,14 @@
 #include <avr/io.h>
-#include <stdint.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
-#include "adc.h"
 #include "spi.h"
 #include "utils.h"
 #include "uart.h"
+
+#define MY_ISR(vector)                                             \
+  void vector(void) __attribute__((__signal__, __INTR_ATTRS));     \
+  void vector(void)
 
 #define BASE_COLOR 0xE1000000
 
@@ -75,7 +77,7 @@ void tcc1_init() {
 	// DDRB |= (1 << PB1);
 }
 
-ISR(TIMER1_COMPA_vect) {
+MY_ISR(TIMER1_COMPA_vect) {
 	update_leds();
 }
 

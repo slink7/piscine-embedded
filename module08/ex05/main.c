@@ -1,11 +1,13 @@
-#include <avr/common.h>
 #include <avr/io.h>
-#include <stdint.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
 #include "adc.h"
 #include "spi.h"
+
+#define MY_ISR(vector)                                             \
+  void vector(void) __attribute__((__signal__, __INTR_ATTRS));     \
+  void vector(void)
 
 #define BASE_COLOR 0xE1000000
 
@@ -23,7 +25,7 @@ uint32_t D6_8[3] = {
 volatile uint8_t led = 0;
 volatile uint8_t component = 0;
 
-ISR(INT0_vect) {
+MY_ISR(INT0_vect) {
 	_delay_ms(50.0);
 	//Certifie par paolo
 	if ((PIND & (1 << PIND2)))
@@ -31,7 +33,7 @@ ISR(INT0_vect) {
 	component = (component + 1) % 3;
 }
 
-ISR(PCINT2_vect) {
+MY_ISR(PCINT2_vect) {
 	_delay_ms(50.0);
 	if ((PIND & (1 << PIND4)))
 		return ;
@@ -56,6 +58,10 @@ void sw_init() {
 
 	//Allows global interrupt (sei())
 	SREG |= (1 << SREG_I);
+
+	// Enable pullup
+	PORTD |= (1 << PD2);
+	PORTD |= (1 << PD4);
 }
 
 int main(void) {
