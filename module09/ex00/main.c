@@ -1,7 +1,5 @@
 #include <avr/io.h>
-#include <stdint.h>
 #include <util/delay.h>
-#include <avr/interrupt.h>
 
 #include "i2c.h"
 
@@ -43,7 +41,7 @@ int main(void) {
 		i2c_start();
 		i2c_write(ADDRESS | 0);
 		i2c_write(OUTPUT_PORT_0); // Command 2 Output port 0
-		i2c_write(~(1 << 3) | ((mem) ? 0xFF : 0x00)); // Toggle pin 3 on and off
+		i2c_write(~(1 << 3) | ((mem) ? 0x08 : 0x00)); // Toggle pin 3 on and off
 		i2c_stop();
 		mem = !mem;
 		_delay_ms(500);

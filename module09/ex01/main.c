@@ -1,7 +1,5 @@
 #include <avr/io.h>
-#include <stdint.h>
 #include <util/delay.h>
-#include <avr/interrupt.h>
 
 #include "i2c.h"
 
@@ -56,8 +54,8 @@ int main(void) {
 	i2c_write(0b11110001); // (pin 1, 2 & 3)
 	i2c_stop();
 
-	volatile uint8_t mem = 0;
-	volatile uint8_t edge = 0;
+	uint8_t mem = 0;
+	uint8_t edge = 0;
 
 	while ('0') {
 

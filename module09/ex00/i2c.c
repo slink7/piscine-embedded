@@ -24,7 +24,7 @@ void i2c_stop(void)
 
 void i2c_init(void) {
 	TWCR = 0;
-	TWBR = 72;
+	TWBR = 72; // Vitesse SCL = F_CPU / (16 + 2 * TWBR * prescaler) = 16 MHz / (16 + 2 * 72 * 1) = 100 kHz (datasheet : "Bit Rate Generator Unit")
 	TWSR = 0x00;
 	TWCR = (1 << TWEN);
 }

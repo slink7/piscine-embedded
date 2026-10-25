@@ -1,7 +1,5 @@
 #include <avr/io.h>
-#include <stdint.h>
 #include <util/delay.h>
-#include <avr/interrupt.h>
 
 #include "i2c.h"
 
@@ -59,7 +57,7 @@ int main(void) {
 	i2c_start();
 	i2c_write(ADDRESS | WRITE);
 	i2c_write(OUTPUT_PORT_0); // Command 2 Output port 0
-	i2c_write(0b01111111); // Display 3bit num to pin 1, 2 & 3
+	i2c_write(0b01111111); // Set output to be the rightmost digit
 	i2c_stop();
 
 	uint8_t digits[10] = {
@@ -81,7 +79,7 @@ int main(void) {
 		i2c_start();
 		i2c_write(ADDRESS | WRITE);
 		i2c_write(OUTPUT_PORT_1); // Command 3 Output port 1
-		i2c_write(digits[mem]); // Toggles a, b, d, e, g to display '2' on 7seg
+		i2c_write(digits[mem]); // Use digits[] to display correct pattern
 		i2c_stop();
 
 		mem = (mem + 1) % 10;

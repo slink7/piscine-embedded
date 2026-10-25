@@ -1,14 +1,8 @@
 #include <avr/io.h>
-#include <stdint.h>
 #include <util/delay.h>
-#include <avr/interrupt.h>
 
 #include "i2c.h"
 #include "adc.h"
-
-#define MY_ISR(vector)                                             \
-  void vector(void) __attribute__((__signal__, __INTR_ATTRS));     \
-  void vector(void)
 
 //
 // D9
@@ -68,7 +62,7 @@ void set_digit(uint8_t pos, uint8_t digit) {
 	i2c_start();
 	i2c_write(ADDRESS | WRITE);
 	i2c_write(OUTPUT_PORT_1); // Command 3 Output port 1
-	i2c_write(digits[digit % 10]); // Toggles a, b, d, e, g to display '2' on 7seg
+	i2c_write(digits[digit % 10]);
 	i2c_stop();
 
 	i2c_start();

@@ -1,12 +1,10 @@
 #include <avr/io.h>
-#include <stdint.h>
 #include <util/delay.h>
-#include <avr/interrupt.h>
 
 #include "i2c.h"
 
-#define MY_ISR(vector)                                             \
-  void vector(void) __attribute__((__signal__, __INTR_ATTRS));     \
+#define MY_ISR(vector)                                                             \
+  void vector(void) __attribute__((__signal__, __used__, __externally_visible__)); \
   void vector(void)
 
 //
@@ -108,7 +106,6 @@ void tcc1_init() {
 	// TCCR1A |= (1 << COM1A0);
 	TIMSK1 |= (1 << OCIE1A);
 
-	// DDRB |= (1 << PB1);
 	SREG |= (1 << SREG_I);
 }
 
